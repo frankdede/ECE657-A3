@@ -38,19 +38,18 @@ def split_data(df, feat_names, target_name, window):
     return dt_train, x_train, y_train, dt_test, x_test, y_test
 
 
-class LSTM(nn.Module):
+class RNN(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_layers, output_dim, scalars):
-        super(LSTM, self).__init__()
+        super(RNN, self).__init__()
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
-        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True)
+        self.lstm = nn.RNN(input_dim, hidden_dim, num_layers, batch_first=True)
         self.fc = nn.Linear(hidden_dim, output_dim)
         self.scalars = scalars
 
     def forward(self, x):
         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).requires_grad_()
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).requires_grad_()
-        out, (hn, cn) = self.lstm(x, (h0.detach(), c0.detach()))
+        out, hn = self.lstm(x, h0.detach())
         out = self.fc(out[:, -1, :])
         return out
 
@@ -67,7 +66,7 @@ if __name__ == "__main__":
     # feats = ['Volume', 'Open', 'High', 'Low']
     # target = 'Open'
     #
-    # window = 3
+    # window = 10
     # dt_train, x_train, y_train, dt_test, x_test, y_test = split_data(df, feats, target, window)
     # train_data = np.concatenate([dt_train, x_train.reshape(x_train.shape[0], -1), y_train], axis=1)
     # test_data = np.concatenate([dt_test, x_test.reshape(x_test.shape[0], -1), y_test], axis=1)
@@ -77,28 +76,24 @@ if __name__ == "__main__":
 
     train_data = pd.read_csv("train_data_RNN.csv", header=None, index_col=None)
     train_data = train_data[train_data.columns[1:]]
-    test_data = pd.read_csv("test_data_RNN.csv", header=None, index_col=None)
-    test_data = test_data[test_data.columns[1:]]
-    whole_data = pd.concat([train_data, test_data])
 
     # scale all feature between -1 and 1
     scalers = {}
     for column in train_data.columns:
         scalers[column] = MinMaxScaler(feature_range=(-1, 1))
         train_data[column] = scalers[column].fit_transform(train_data[column].values.reshape(-1, 1))
-        test_data[column] = scalers[column].transform(test_data[column].values.reshape(-1, 1))
 
     x_train = to_tensor(train_data.values[:, :-1].reshape(len(train_data), 1, -1))
     y_train_lstm = to_tensor(train_data.values[:, -1].reshape(-1, 1))
 
-    input_dim = 12
+    input_dim = 40
     hidden_dim = 200
     num_layers = 2
     output_dim = 1
     num_epochs = 200
 
-    model = LSTM(input_dim=input_dim, hidden_dim=hidden_dim, output_dim=output_dim, num_layers=num_layers,
-                 scalars=scalers)
+    model = RNN(input_dim=input_dim, hidden_dim=hidden_dim, output_dim=output_dim, num_layers=num_layers,
+                scalars=scalers)
     mse = torch.nn.MSELoss(reduction='mean')
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
@@ -113,6 +108,7 @@ if __name__ == "__main__":
         optimizer.step()
         losses.append(loss)
 
+    print(model)
     torch.save(model, "./models/20433010_RNN_model.torch")
     with open("./models/scalar.pk", "wb") as f:
         pickle.dump(scalers, f)

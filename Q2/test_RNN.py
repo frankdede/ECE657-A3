@@ -1,5 +1,5 @@
 import torch
-from train_RNN import LSTM, to_tensor
+from train_RNN import RNN, to_tensor
 import pickle
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
@@ -22,7 +22,6 @@ if __name__ == "__main__":
 
     scaled_test_data = test_data.values
 
-    #
     x_test = to_tensor(scaled_test_data[:, :-1].reshape(scaled_test_data.shape[0], 1, -1))
     y_test = scaled_test_data[:, -1:]
 
