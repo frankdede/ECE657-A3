@@ -43,13 +43,13 @@ class RNN(nn.Module):
         super(RNN, self).__init__()
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
-        self.lstm = nn.RNN(input_dim, hidden_dim, num_layers, batch_first=True)
+        self.rnn = nn.RNN(input_dim, hidden_dim, num_layers, batch_first=True)
         self.fc = nn.Linear(hidden_dim, output_dim)
         self.scalars = scalars
 
     def forward(self, x):
         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).requires_grad_()
-        out, hn = self.lstm(x, h0.detach())
+        out, hn = self.rnn(x, h0.detach())
         out = self.fc(out[:, -1, :])
         return out
 
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     # feats = ['Volume', 'Open', 'High', 'Low']
     # target = 'Open'
     #
-    # window = 10
+    # window = 3
     # dt_train, x_train, y_train, dt_test, x_test, y_test = split_data(df, feats, target, window)
     # train_data = np.concatenate([dt_train, x_train.reshape(x_train.shape[0], -1), y_train], axis=1)
     # test_data = np.concatenate([dt_test, x_test.reshape(x_test.shape[0], -1), y_test], axis=1)
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     x_train = to_tensor(train_data.values[:, :-1].reshape(len(train_data), 1, -1))
     y_train_lstm = to_tensor(train_data.values[:, -1].reshape(-1, 1))
 
-    input_dim = 40
+    input_dim = 12
     hidden_dim = 200
     num_layers = 2
     output_dim = 1
